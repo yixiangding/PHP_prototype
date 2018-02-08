@@ -1,8 +1,9 @@
 <?php 
-	if (isset($_POST['input_text']) && empty($_POST['input_text'])) {
-		echo '<script type="text/javascript">alert("Please enter a symbol");</script>';
-	} else {
+	$input_empty = true;
+	if (isset($_POST['input_text']) && trim($_POST['input_text'] == false)) {
 
+	} else {
+		$input_empty = false;
 	}
 ?>
 <!DOCTYPE html>
@@ -39,21 +40,21 @@
 		}
 		#data_chart,#news_chart {
 			width: 100%;
-			max-width: 1000px;
-			min-width: 600px;
+			max-width: 1200px;
+			min-width: 800px;
 			margin: 10px auto;
 			border-collapse: collapse;
 			border: 1px solid rgb(217,217,217);
 			font-size: 12px;
 		}
 		#data_chart th,#news_chart th {
-			width: 400px;
+			width: 30%;
 			text-align: left;
 			background-color: rgb(245,245,245);
 			border: 1px solid rgb(217,217,217);
 		}
 		#data_chart td,#news_chart td {
-			width: 800px;
+			width: 70%;
 			text-align: center;			
 			background-color: rgb(251,251,251);
 			border: 1px solid rgb(217,217,217);
@@ -63,22 +64,27 @@
 		}
 		.indicator_link {
 			color: rgb(0, 24, 197);
+			margin: 0 10px;
+			text-decoration: none;
 		}
 		.indicator_link:hover {
 			color: rgb(63,62,65);
 		}
 		#container {
 			width: 100%;
-			max-width: 1000px;
-			min-width: 600px;
+			height: 600px;
+			max-width: 1200px;
+			min-width: 800px;
 			margin: 10px auto;
 		}
-		#source {
+		#source, .news_link {
 			text-decoration: none;
 		}
 		#source:hover {
 			color: rgb(63, 62, 65);
-			text-decoration: underline;
+		}
+		.news_link:hover {
+			color: rgb(63, 62, 65);
 		}
 		#news_control {
 			color: rgb(191, 191, 191);
@@ -96,14 +102,9 @@
 		}
 	</style>
 	
-	<?php 
-		$input_symbol = $_POST['input_text'];
-		$query_url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=' . $input_symbol . '&outputsize=full&apikey=QTAX2CXFZ8AQE95Z';
-		$JSON_content = file_get_contents($query_url);
-		$content = json_decode($JSON_content);
-	?>
 
 	<script src="https://code.highcharts.com/highcharts.js"></script>
+	<script src="https://code.highcharts.com/modules/exporting.js"></script>
 
 	<script>
 		var chart;
@@ -111,6 +112,7 @@
 
 		function clearText() {
 			document.getElementById('input_text').value = "";
+			if(document.getElementById('big_wrapper') != null) document.getElementById('big_wrapper').style.display = 'none';
 		}
 
 		function news_control() {
@@ -132,6 +134,13 @@
 			}
 		}
 
+		function submit_form() {
+			if (document.getElementById('input_text').value.trim() == "") {
+				alert("Please enter a symbol");
+				return false;
+			} else return true;
+		}
+
 		function request_single(request_symbol) {
 		var xmlhttp = new XMLHttpRequest();
 		xmlhttp.onreadystatechange = function() {
@@ -142,9 +151,9 @@
        			var SMA_temp = [];
        			var count = 0;
        			for (var key in SMA_value) {
-       				SMA_temp.unshift([(new Date(key)).getTime(), parseFloat(SMA_value[key][request_symbol])]);
+       				SMA_temp.unshift(parseFloat(SMA_value[key][request_symbol]));
        				count++;
-       				if (count >= 133) break;
+       				if (count >= 121) break;
        			}
 
        			// make SMA chart
@@ -165,14 +174,15 @@
 			        	}
 			        },
 			        xAxis: {
-			            type: 'datetime',
-			            tickInterval: 24 * 3600 * 1000 * 7,
+			            type: 'category',
+			            categories: cate,
+			            tickInterval: 5,
 			        	labels: {
 			        		formatter: function () {
-			        			return formatDate(this.value);
+			        			return this.value.substring(5,7) + '/' + this.value.substring(8);
 			        		},
 			        		style: {
-			        			fontSize: '7px'
+			        			fontSize: '6px'
 			        		}
 			        	}
 			        },
@@ -186,7 +196,7 @@
 			            tickInterval: null,
 			            max: null,
 			            style: {
-			        			fontSize: '7px'
+			        		fontSize: '7px'
 			        	}
 			        },
 			        legend: {
@@ -197,7 +207,7 @@
 			        },
 			        tooltip: {
 			        	formatter: function() {
-			        		var tip = formatDate(this.x);
+			        		var tip = this.x.substring(5,7) + '/' + this.x.substring(8);
 			        		tip += '<br/><span style="color:' + this.color + '">\u25CF</span> ' + this.series.name + ': ' + Highcharts.numberFormat(this.y, 2);
 			        		return tip;
 			        	}
@@ -206,7 +216,8 @@
 				        series: {
 				            marker: {
 				                enabled: true,
-				                radius: 1.5
+				                radius: 1.5,
+				                symbol: 'square'
 				            }
 				        },
 				        spline: {
@@ -218,7 +229,6 @@
 			            name: symbol,
 			            data: SMA_temp,
 			            color: 'rgb(202, 56, 39)',
-			            pointInterval: 24 * 3600 * 1000
 			        }],
 			    };
 			    chart = Highcharts.chart('container', option);
@@ -239,10 +249,10 @@
 	       			var SlowD_temp = [];
 	       			var count = 0;
 	       			for (var key in STOCH_value) {
-	       				SlowK_temp.unshift([(new Date(key)).getTime(), parseFloat(STOCH_value[key]["SlowK"])]);
-	       				SlowD_temp.unshift([(new Date(key)).getTime(), parseFloat(STOCH_value[key]["SlowD"])]);
+	       				SlowK_temp.unshift(parseFloat(STOCH_value[key]["SlowK"]));
+	       				SlowD_temp.unshift( parseFloat(STOCH_value[key]["SlowD"]));
 	       				count++;
-	       				if (count >= 133) break;
+	       				if (count >= 121) break;
 	       			}
 
 					var option = {
@@ -262,14 +272,15 @@
 				        	}
 				        },
 				        xAxis: {
-				            type: 'datetime',
-				            tickInterval: 24 * 3600 * 1000 * 7,
+				            type: 'category',
+				            categories: cate,
+				            tickInterval: 5,
 				        	labels: {
 				        		formatter: function () {
 				        			return formatDate(this.value);
 				        		},
 				        		style: {
-				        			fontSize: '7px'
+				        			fontSize: '6px'
 				        		}
 				        	},
 				        	crosshair: true
@@ -284,18 +295,19 @@
 				            tickInterval: null,
 				            max: null,
 				            style: {
-			        			fontSize: '7px'
+			        			fontSize: '6px'
 				        	}
 				        },
 				        plotOptions: {
 				            series: {
 					            marker: {
 					                enabled: true,
-					                radius: 1.5
+					                radius: 1.5,
+					                symbol: 'square'
 					            }
 				       		},
 					        spline: {
-					        	lineWidth: 0.3
+					        	lineWidth: 0.5
 					        }
 				        },
 				        legend: {
@@ -308,7 +320,7 @@
 				        tooltip: {
 				        	formatter: function() {
 				        		var points = this.points; // array[# of series]
-				        		var tip = formatDate(this.x);
+				        		var tip = this.x.substring(5,7) + '/' + this.x.substring(8);
 				        		for (var i in points) {
 					        		tip += '<br/><span style="color:' + points[i].color + '">\u25CF</span> ' + points[i].series.name + ': ' + Highcharts.numberFormat(points[i].y);
 				        		}
@@ -322,14 +334,12 @@
 				            name: symbol + " SlowK",
 				            data: SlowK_temp,
 				            color: 'rgb(184, 44, 11)',
-				            pointInterval: 24 * 3600 * 1000
 				        },
 				        {
 				        	type: 'spline',
 				        	name: symbol + " SlowD",
 				        	data: SlowD_temp,
 				        	color: 'rgb(152, 193, 233)',
-				        	pointInterval: 24 * 3600 * 1000,
 				        }]
 				    };
 				    var chart = Highcharts.chart('container', option);	       								
@@ -351,11 +361,11 @@
 	       			var RLB_temp = [];
 	       			var count = 0;
 	       			for (var key in response_value) {
-	       				RMB_temp.unshift([(new Date(key)).getTime(), parseFloat(response_value[key][name1])]);
-	       				RUB_temp.unshift([(new Date(key)).getTime(), parseFloat(response_value[key][name2])]);
-	       				RLB_temp.unshift([(new Date(key)).getTime(), parseFloat(response_value[key][name3])]);
+	       				RMB_temp.unshift(parseFloat(response_value[key][name1]));
+	       				RUB_temp.unshift(parseFloat(response_value[key][name2]));
+	       				RLB_temp.unshift(parseFloat(response_value[key][name3]));
 	       				count++;
-	       				if (count >= 133) break;
+	       				if (count >= 121) break;
 	       			}
 
 					var option = {
@@ -375,14 +385,15 @@
 				        	}
 				        },
 				        xAxis: {
-				            type: 'datetime',
-				            tickInterval: 24 * 3600 * 1000 * 7,
+				            type: 'category',
+				            categories: cate,
+				            tickInterval: 5,
 				        	labels: {
 				        		formatter: function () {
-				        			return formatDate(this.value);
+				        			return this.value.substring(5,7) + '/' + this.value.substring(8);
 				        		},
 				        		style: {
-				        			fontSize: '7px'
+				        			fontSize: '6px'
 				        		}
 				        	},
 				        	crosshair: true
@@ -397,18 +408,19 @@
 				            tickInterval: null,
 				            max: null,
 				            style: {
-			        			fontSize: '7px'
+			        			fontSize: '6px'
 				        	}
 				        },
 				        plotOptions: {
 				            series: {
 					            marker: {
 					                enabled: true,
-					                radius: 1.5
+					                radius: 1.5,
+					                symbol: 'square'
 					            }
 				       		},
 					        spline: {
-					        	lineWidth: 0.3
+					        	lineWidth: 0.5
 					        }
 				        },
 				        legend: {
@@ -421,7 +433,7 @@
 				        tooltip: {
 				        	formatter: function() {
 				        		var points = this.points; // array[# of series]
-				        		var tip = formatDate(this.x);
+				        		var tip = this.x.substring(5,7) + '/' + this.x.substring(8);
 				        		for (var i in points) {
 					        		tip += '<br/><span style="color:' + points[i].color + '">\u25CF</span> ' + points[i].series.name + ': ' + Highcharts.numberFormat(points[i].y);
 				        		}
@@ -435,21 +447,18 @@
 				            name: symbol + " " + name1,
 				            data: RMB_temp,
 				            color: 'rgb(180, 50, 24)',
-				            pointInterval: 24 * 3600 * 1000
 				        },
 				        {
 				        	type: 'spline',
 				        	name: symbol + " " + name2,
 				        	data: RUB_temp,
 				        	color: 'rgb(84, 84, 86)',
-				        	pointInterval: 24 * 3600 * 1000,
 				        },
 				        {
 				        	type: 'spline',
 				        	name: symbol + " " + name3,
 				        	data: RLB_temp,
 				        	color: 'rgb(180, 230, 162)',
-				        	pointInterval: 24 * 3600 * 1000,
 				        }]
 				    };
 				    var chart = Highcharts.chart('container', option);	       								
@@ -468,17 +477,44 @@
 	<div class="inline_div">
 		<input id="input_text" type="text" name="input_text" value="<?php echo isset($_POST['input_text']) ? $_POST['input_text'] : ""; ?>">
 		<div id="btns">
-			<input id="search_btn" type="submit" name="submit" value="Search">
+			<input id="search_btn" type="submit" name="submit" value="Search" onclick="return submit_form();">
 			<input id="clear_btn" type="button" name="Clear" value="Clear" onclick="clearText()">
 		</div>
 	</div>
 	<div><i>* - Mandatroy fields</i></div>
 </form>
 
-<?php
-	if (false) {
-		// error table
 
+
+<?php 
+	if (!isset($_POST['submit'])) {
+
+	} else if (!$input_empty) {
+		$input_symbol = $_POST['input_text'];
+		$query_url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=' . rawurlencode($input_symbol) . '&outputsize=full&apikey=QTAX2CXFZ8AQE95Z';
+		date_default_timezone_set('US/Eastern');
+		$arrContextOptions=array(
+				"ssl" => array(
+	    		"verify_peer"=> false,
+	    		"verify_peer_name"=> false,
+			),
+		);
+		$JSON_content = @file_get_contents($query_url, false, stream_context_create($arrContextOptions));
+		$content = json_decode($JSON_content);
+		$input_valid = false;
+		if (!isset($content->{"Error Message"})) $input_valid = true;
+
+		if (!$input_valid) {
+			echo "<div id=\"big_wrapper\"><table id=\"data_chart\"><tr><th>Error</th><td>Error: NO record has been found, please enter a valid symbol</td></tr></table></div>";
+		} else { // input is valid
+?>
+
+
+<?php
+	if (false === $JSON_content) {
+		// error while fetching
+		echo "<script>alert('Fail to connect with server! Please refresh and try again!');</script>";
+		exit();
 	} else {
 		// process necessary data
 		$time_series = $content->{"Time Series (Daily)"};
@@ -499,13 +535,12 @@
 		$chart_data = array();
 		$volume_data = array();
 		$pointer = reset($time_series);
-		date_default_timezone_set('US/Eastern');
 		// date_default_timezone_set('UTC');
 		$count = 0;
-		while ($pointer && $count < 133) {
+		while ($pointer && $count < 121) {
 			// push [time, price] into $chart_data
-			array_unshift($chart_data, array(strtotime(key($time_series)) * 1000, (float) $pointer->{"4. close"})); // strtotime: sec --> Date: msec
-			array_unshift($volume_data, array(strtotime(key($time_series)) * 1000, (float) $pointer->{"5. volume"}));
+			array_unshift($chart_data, array(key($time_series), (float) $pointer->{"4. close"})); // strtotime: sec --> Date: msec
+			array_unshift($volume_data, array(key($time_series), (float) $pointer->{"5. volume"}));
 			$pointer = next($time_series);
 			$count++;
 		}
@@ -515,15 +550,15 @@
 		echo '<script>var cur_date = "' . date_format(new DateTime($timestamp), 'm/d/Y') . '";</script>';
 
 		// set up Indicators in table
-		$Price_link = "<a class=\"indicator_link\" href=\"#\" onclick=\"price_chart()\">Price</a>  ";
-		$SMA_link = "<a class=\"indicator_link\" onclick=\"request_single('SMA')\" href=\"#\">SMA</a>  ";
-		$EMA_link = "<a class=\"indicator_link\" onclick=\"request_single('EMA')\" href=\"#\">EMA</a>  ";
-		$STOCH_link = "<a class=\"indicator_link\" onclick=\"request_double('STOCH')\" href=\"#\">STOCH</a>  ";
-		$RSI_link = "<a class=\"indicator_link\" onclick=\"request_single('RSI')\" href=\"#\">RSI</a>  ";
-		$ADX_link = "<a class=\"indicator_link\" onclick=\"request_single('ADX')\" href=\"#\">ADX</a>  ";
-		$CCI_link = "<a class=\"indicator_link\" onclick=\"request_single('CCI')\" href=\"#\">CCI</a>  ";
-		$BBANDS_link = "<a class=\"indicator_link\" onclick=\"request_treble('BBANDS', 'Real Middle Band', 'Real Upper Band', 'Real Lower Band')\" href=\"#\">BBANDS</a>  ";
-		$MACD_link = "<a class=\"indicator_link\" onclick=\"request_treble('MACD', 'MACD', 'MACD_Hist', 'MACD_Signal')\" href=\"#\">MACD</a>";
+		$Price_link = "<a class=\"indicator_link\" href=\"javascript:void(0)\" onclick=\"price_chart()\">Price</a>  ";
+		$SMA_link = "<a class=\"indicator_link\" onclick=\"request_single('SMA')\" href=\"javascript:void(0)\">SMA</a>  ";
+		$EMA_link = "<a class=\"indicator_link\" onclick=\"request_single('EMA')\" href=\"javascript:void(0)\">EMA</a>  ";
+		$STOCH_link = "<a class=\"indicator_link\" onclick=\"request_double('STOCH')\" href=\"javascript:void(0)\">STOCH</a>  ";
+		$RSI_link = "<a class=\"indicator_link\" onclick=\"request_single('RSI')\" href=\"javascript:void(0)\">RSI</a>  ";
+		$ADX_link = "<a class=\"indicator_link\" onclick=\"request_single('ADX')\" href=\"javascript:void(0)\">ADX</a>  ";
+		$CCI_link = "<a class=\"indicator_link\" onclick=\"request_single('CCI')\" href=\"javascript:void(0)\">CCI</a>  ";
+		$BBANDS_link = "<a class=\"indicator_link\" onclick=\"request_treble('BBANDS', 'Real Middle Band', 'Real Upper Band', 'Real Lower Band')\" href=\"javascript:void(0)\">BBANDS</a>  ";
+		$MACD_link = "<a class=\"indicator_link\" onclick=\"request_treble('MACD', 'MACD', 'MACD_Hist', 'MACD_Signal')\" href=\"javascript:void(0)\">MACD</a>";
 
 		// arrow img for chart
 		if ($change_value > 0) {
@@ -533,7 +568,7 @@
 		}
 
 		// build the chart
-		$data_chart = "<table id='data_chart'>
+		$data_chart = "<div id='big_wrapper'><table id='data_chart'>
 						<tr>
 							<th>Stock Ticker Symbol</th>
 							<td>" . $content->{"Meta Data"}->{"2. Symbol"} . "</td>
@@ -560,7 +595,7 @@
 						</tr>
 						<tr>
 							<th>Day's Range</th>
-							<td>" . reset($time_series)->{"3. low"} . "-" . current($time_series)->{"2. high"} . "</td>
+							<td>" . round(reset($time_series)->{"3. low"}, 2) . " - " . round(current($time_series)->{"2. high"}, 2) . "</td>
 						</tr>
 						<tr>
 							<th>Volume</th>
@@ -595,6 +630,15 @@
 		return temp;
 	}
 
+	var cate = [];
+	var price = [];
+	var volume = [];
+	for (var key in price_data) {
+		var value = price_data[key];
+		cate.push(value[0]);
+		price.push(value[1]);
+		volume.push(volume_data[key][1]);
+	}
 	price_chart();
 
 	function price_chart() {
@@ -609,20 +653,21 @@
 	        },
 	        subtitle: {
 	        	useHTML: true,
-	        	text: '<a id="source" href="https://www.alphavantage.co/">Source: Alpha Vantage</a>',
+	        	text: '<a id="source" href="https://www.alphavantage.co/" target="_blank">Source: Alpha Vantage</a>',
 	        	style: {
 	        		color: 'rgb(54, 61, 206)'
 	        	}
 	        },
 	        xAxis: {
-	            type: 'datetime',
-	            tickInterval: 24 * 3600 * 1000 * 7,
+	            type: 'category',
+	            categories: cate,
+	            tickInterval: 5,
 	        	labels: {
 	        		formatter: function () {
-	        			return formatDate(this.value);
+	        			return this.value.substring(5,7) + '/' + this.value.substring(8);
 	        		},
 	        		style: {
-	        			fontSize: '7px'
+	        			fontSize: '6px'
 	        		}
 	        	}
 	        },
@@ -644,7 +689,7 @@
 	            title: {
 	            	text: 'Volume'
 	            },
-	            tickInterval: 10000000,
+	            tickInterval: 80000000,
 	            max: 300000000,
 	            opposite: true
 	        }],
@@ -652,9 +697,6 @@
 	            area: {
 	                fillColor: 'rgba(231, 143, 142, 0.75)',
 	                lineColor: 'rgba(192, 53, 54, 0.9)',
-	                marker: {
-	                    radius: 2
-	                },
 	                lineWidth: 1,
 	                states: {
 	                    hover: {
@@ -666,7 +708,12 @@
 	            column: {
 	            	color: 'rgb(255, 255, 255)',
 	            	groupPadding: 0.1,
-	            	pointWidth: 1
+	            	pointWidth: 0.2
+	            },
+	            series: {
+	            	marker: {
+	            		enabled: false,
+	            	}
 	            }
 	        },
 	        legend: {
@@ -678,7 +725,7 @@
 
 	        tooltip: {
 	        	formatter: function() {
-	        		var tip = formatDate(this.x);
+	        		var tip = this.x.substring(5,7) + '/' + this.x.substring(8);
 	        		tip += '<br/><span style="color:' + this.color + '">\u25CF</span> ' + this.series.name + ': ' + this.y;
 	        		return tip;
 	        	}
@@ -687,14 +734,13 @@
 	        series: [{
 	            type: 'area',
 	            name: symbol,
-	            data: price_data,
+	            data: price,
 	            color: 'rgba(231, 143, 142, 0.80)',
-	            pointInterval: 24 * 3600 * 1000
 	        },
 	        {
 	        	type: 'column',
 	        	name: symbol + " Volume",
-	        	data: volume_data,
+	        	data: volume,
 	        	yAxis: 1
 	        }]
 	    };
@@ -704,25 +750,46 @@
 
 <?php
 // get news content
-$news_content = file_get_contents("http://seekingalpha.com/api/sa/combined/" . $input_symbol . ".xml");
+$news_content = @file_get_contents("http://seekingalpha.com/api/sa/combined/" . $input_symbol . ".xml");
+if ($news_content != false) { // judge $news_content
+
+
 $news_xml = simplexml_load_string($news_content);
 $news_xml = $news_xml->channel->item;
 echo "<div id=\"news_wrapper\" style=\"display: none;\">";
 echo "<table id=\"news_chart\">";
 $count = 0;
+$news_items = array();
 foreach ($news_xml as $item) {
-	$news_title = $item->title;
-	$news_link = "https://seekingalpha.com/news/" . substr($item->guid, -7);
-	$news_date = $item->pubDate;
-	$news_date = substr($news_date, 0, strlen($news_date) - 6);
-	echo "<tr><td><a href='$news_link'>{$news_title}</a> &nbsp &nbsp &nbsp " . "Publicated Time: {$news_date}</td></tr>";
+	if (strpos($item->{'guid'}, 'Article') == false) continue;
+	array_push($news_items, $item);
 	$count++;
 	if ($count == 5) break;
 }
 echo "</table>";
-// print_r($news_chart);
 echo "</div>";
+$news_items = json_encode($news_items);
+echo "<script>var news_items = " . $news_items . ";</script>";
 ?>
+
+<script>
+	var news_chart = document.getElementById('news_chart');
+	var news_inner = "";
+	for (var i in news_items) { // news_items: array contains 5 news
+		var news_title = news_items[i].title;
+		// var news_link = "https://seekingalpha.com/news/" + news_items[i].guid.substring(-7);
+		var news_link = news_items[i].link;
+		var news_date = news_items[i].pubDate.substring(0, news_items[i].pubDate.length - 6);
+		news_inner += "<tr><td><a class='news_link' href=" + news_link + " target='_blank'>" + news_title + "</a> &nbsp &nbsp &nbsp " + "Publicated Time: " + news_date + "</td></tr>";
+	}
+	news_chart.innerHTML = news_inner + '</div>';
+</script>
 <!-- API Key: QTAX2CXFZ8AQE95Z -->
 </body>
 </html>
+
+<?php 
+		}	// judge $news_content
+	}
+}
+?>
